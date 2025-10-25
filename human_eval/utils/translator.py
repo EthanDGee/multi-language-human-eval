@@ -1,10 +1,11 @@
 import json
 from ollama import chat, ChatResponse
+from ..data import read_problems, write_jsonl
 
 
 class Translator:
     def __init__(self):
-        config = json.load(open("config.json", "r"))
+        config = json.load(open("human_eval/utils/config.json", "r"))
 
         self.translation_model = config["translation_model"]
         self.languages = config["languages"]
@@ -19,9 +20,19 @@ class Translator:
         return response["response"]["content"]
 
     def _translate_problem(self, problem: str) -> dict:
-        translated_problems = {"english": problem}
+        problem_translations = {"english": problem}
 
         for lang in self.languages:
-            translated_problems[lang] = self._translate_prompt(lang, problem)
+            problem_translations[lang] = self._translate_prompt(lang, problem)
 
-        return translated_problems
+        return problem_translations
+
+    def translate_dataset(self):
+        problems = read_problems()
+
+        translated_prompts = []
+        for i, task_id in enumerate(problems):
+            prob = problems[task_id]["prompt"]
+
+            translated_prompts.append(self._translate_problem(prob))
+            translated_prompts[i]["task_id"] = task_id
