@@ -1,0 +1,10 @@
+{
+  "languages": [
+    "mandarin-chinese",
+    "spanish",
+    "hindi",
+    "arabic",
+    "french"
+  ],
+  "translation_model": "gemma3-translator:4b"
+}
