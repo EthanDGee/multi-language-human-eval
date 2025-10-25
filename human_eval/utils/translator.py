@@ -17,3 +17,11 @@ class Translator:
         )
 
         return response["response"]["content"]
+
+    def _translate_problem(self, problem: str) -> dict:
+        translated_problems = {"english": problem}
+
+        for lang in self.languages:
+            translated_problems[lang] = self._translate_prompt(lang, problem)
+
+        return translated_problems
