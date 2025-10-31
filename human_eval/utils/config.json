@@ -6,5 +6,5 @@
     "arabic",
     "french"
   ],
-  "translation_model": "gemma3-translator:4b"
+  "translation_model": "zongwei/gemma3-translator:4b"
 }

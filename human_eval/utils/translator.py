@@ -23,13 +23,15 @@ class Translator:
         :return: The translated programming problem prompt in the specified target language.
         :rtype: str
         """
-        prompt = f"Translate the following progamming problem from english into {target_language}:\n{prompt}"
+        prompt = f"""Translate the following problem description and examples from english into {target_language} DO NOT
+        SOLVE THE PROBLEM ONLY OUTPUT THE PROBLEM DESCRIPTION + EXAMPLES IN THE TARGET LANGUAGE ANY GENERATED CODE IS 
+        A FAILED RESULT ONLY OUTPUT TRANSLATED TEXT THEN STOP GENERATION:\n{prompt}"""
 
         response: ChatResponse = chat(
             model=self.translation_model, messages=[{"role": "user", "content": prompt}]
         )
 
-        return response["response"]["content"]
+        return response["message"]["content"]
 
     def _translate_problem(self, problem: str) -> dict:
         """
@@ -44,9 +46,15 @@ class Translator:
         :rtype: dict
         """
         problem_translations = {"english": problem}
+        print("Target Problem")
+        print(problem_translations)
 
         for lang in self.languages:
             problem_translations[lang] = self._translate_prompt(lang, problem)
+
+            print(f"Target Language: {lang}")
+            print(problem_translations[lang])
+            print()
 
         return problem_translations
 
@@ -64,7 +72,8 @@ class Translator:
         problems = read_problems()
 
         translated_prompts = []
-        for task_id in problems:
+        for problem_num, task_id in enumerate(problems):
+            print(f"Problem {problem_num}/164")
             entry = deepcopy(problems[task_id])
             entry["task_id"] = task_id
 
