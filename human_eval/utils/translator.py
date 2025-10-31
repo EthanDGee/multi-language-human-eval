@@ -1,6 +1,7 @@
 import json
-from ollama import chat, ChatResponse
+from copy import deepcopy
 from ..data import read_problems, write_jsonl
+from ollama import chat, ChatResponse
 
 
 class Translator:
@@ -63,8 +64,22 @@ class Translator:
         problems = read_problems()
 
         translated_prompts = []
-        for i, task_id in enumerate(problems):
-            prob = problems[task_id]["prompt"]
+        for task_id in problems:
+            entry = deepcopy(problems[task_id])
+            entry["task_id"] = task_id
 
-            translated_prompts.append(self._translate_problem(prob))
-            translated_prompts[i]["task_id"] = task_id
+            prob = entry.pop("prompt")
+            entry["prompts"] = self._translate_problem(prob)
+
+            translated_prompts.append(entry)
+
+        write_jsonl("data/TranslatedHumanEval.jsonl.gz", translated_prompts)
+
+
+def main():
+    translator = Translator()
+    translator.translate_dataset()
+
+
+if __name__ == "__main__":
+    main()
