@@ -34,23 +34,33 @@ class Translator:
 
         return response["message"]["content"]
 
-    def _translate_problem(self, problem: str) -> dict:
+    def _translate_problem(self, problem: str, existing_translations: dict | None = None) -> dict:
         """
         Translates a given problem statement into multiple languages based on self.languages.
         The translation is stored in a dictionary where the key is the language and the
         value is the translated string. The source English problem is always included.
+        Skips languages that are already translated.
 
         :param problem: The problem statement in English to be translated.
         :type problem: str
+        :param existing_translations: Existing translations to skip, defaults to None
+        :type existing_translations: dict, optional
         :return: A dictionary where keys represent the language and values are the translated
             problem statement.
         :rtype: dict
         """
         problem_translations = {"english": problem}
+        if existing_translations:
+            problem_translations.update(existing_translations)
+        
         print("Target Problem")
         print(problem_translations)
 
         for lang in self.languages:
+            if lang in problem_translations:
+                print(f"Skipping {lang} - already translated")
+                continue
+                
             problem_translations[lang] = self._translate_prompt(lang, problem)
 
             print(f"Target Language: {lang}")
