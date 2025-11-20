@@ -3,8 +3,13 @@
     "mandarin-chinese",
     "spanish",
     "hindi",
+    "portugese",
+    "bengali",
+    "french",
+    "russian",
     "arabic",
-    "french"
+    "japanese",
+    "punjabi"
   ],
   "translation_model": "zongwei/gemma3-translator:4b"
 }
