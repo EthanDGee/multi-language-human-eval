@@ -1,5 +1,6 @@
 import json
 import time
+import logging
 import warnings
 from copy import deepcopy
 from ..data import read_problems, write_jsonl
@@ -7,11 +8,15 @@ from ollama import chat, ChatResponse
 
 
 class Translator:
+    
     def __init__(self):
         config = json.load(open("human_eval/utils/config.json", "r"))
 
         self.translation_model = config["translation_model"]
         self.languages = config["languages"]
+        
+        self._logger = logging.getLogger(__name__)
+
 
     def _translate_prompt(self, target_language: str, prompt: str) -> str:
         """
@@ -105,19 +110,19 @@ class Translator:
         if existing_translations:
             problem_translations.update(existing_translations)
         
-        print("Target Problem")
-        print(problem_translations)
+        self._logger.info("Target Problem")
+
+        self._logger.info(problem_translations)
 
         for lang in self.languages:
             if lang in problem_translations:
-                print(f"Skipping {lang} - already translated")
+                self._logger.info(f"Skipping {lang} - already translated")
                 continue
                 
             problem_translations[lang] = self._translate_prompt(lang, problem)
 
-            print(f"Target Language: {lang}")
-            print(problem_translations[lang])
-            print()
+            self._logger.info(f"Target Language: {lang}")
+            self._logger.info(problem_translations[lang])
 
         return problem_translations
 
@@ -136,7 +141,8 @@ class Translator:
 
         translated_prompts = []
         for problem_num, task_id in enumerate(problems):
-            print(f"Problem {problem_num + 1}/164")
+            print(f"Problem {problem_num + 1}/164", end="\r")
+            self._logger.info(f"Problem {problem_num + 1}/164")
             entry = deepcopy(problems[task_id])
             entry["task_id"] = task_id
 
