@@ -1,4 +1,6 @@
 import json
+import time
+import warnings
 from copy import deepcopy
 from ..data import read_problems, write_jsonl
 from ollama import chat, ChatResponse
@@ -28,11 +30,61 @@ class Translator:
         + EXAMPLES IN THE TARGET LANGUAGE ANY GENERATED CODE IS A FAILED RESULT ONLY OUTPUT
         TRANSLATED TEXT THEN STOP GENERATION:\n{prompt}"""
 
-        response: ChatResponse = chat(
-            model=self.translation_model, messages=[{"role": "user", "content": prompt}]
-        )
-
-        return response["message"]["content"]
+        return self._call_ollama_with_retry(prompt)
+    
+    def _call_ollama_with_retry(self, prompt: str, max_retries=3, retry_delay=5) -> str:
+        """
+        Call ollama API with retry mechanism and error handling.
+        
+        :param prompt: The prompt to send to ollama
+        :param max_retries: Maximum number of retry attempts
+        :param retry_delay: Delay between retries in seconds
+        :return: The response content from ollama
+        """
+        for attempt in range(max_retries):
+            try:
+                response: ChatResponse = chat(
+                    model=self.translation_model, 
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                
+                # Validate response structure
+                if not response or "message" not in response or "content" not in response["message"]:
+                    raise ValueError("Invalid response structure from ollama API")
+                
+                content = response["message"]["content"]
+                if not content or not content.strip():
+                    raise ValueError("Empty response content from ollama API")
+                
+                return content
+                
+            except ConnectionError as e:
+                warnings.warn(f"Connection error to ollama API. Attempt {attempt + 1}/{max_retries}. Error: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                raise ConnectionError(f"Failed to connect to ollama API after {max_retries} attempts: {e}")
+                
+            except TimeoutError as e:
+                warnings.warn(f"Timeout error from ollama API. Attempt {attempt + 1}/{max_retries}. Error: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                raise TimeoutError(f"Ollama API timeout after {max_retries} attempts: {e}")
+                
+            except ValueError as e:
+                warnings.warn(f"Invalid response from ollama API. Attempt {attempt + 1}/{max_retries}. Error: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                raise ValueError(f"Invalid ollama API response after {max_retries} attempts: {e}")
+                
+            except Exception as e:
+                warnings.warn(f"Unexpected error from ollama API. Attempt {attempt + 1}/{max_retries}. Error: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                raise Exception(f"Failed to call ollama API after {max_retries} attempts: {e}")
 
     def _translate_problem(self, problem: str, existing_translations: dict | None = None) -> dict:
         """
