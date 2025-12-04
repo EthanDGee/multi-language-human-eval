@@ -1,21 +1,72 @@
-# HumanEval: Hand-Written Evaluation Set 
+## Multi-lingual HumanEval
 
-This is an evaluation harness for the HumanEval problem solving dataset
-described in the paper "[Evaluating Large Language Models Trained on
-Code](https://arxiv.org/abs/2107.03374)".
+This project is a fork of the original OpenAI HumanEval, expanded to include support for multiple human languages. This allows for the evaluation of code generation models in contexts beyond English.
+
+The currently supported languages are: Mandarin Chinese, Spanish, Hindi, Portuguese, Bengali, French, Russian, Arabic, Japanese, and Punjabi. These translations were generated using the `mistral:7b-instruct` model.
+
+### Adding New Languages
+
+To add more languages, you can modify the `human_eval/utils/config.json` file to include the new language. You would then need to translate the problems into the new language and ensure the evaluation harness can correctly process them.
+
+The process involves three main steps:
+
+1. **Configuration**: Specifying the new language.
+2. **Translation**: Generating the translated problem set.
+3. **Evaluation**: Adapting the evaluation script to use the translated problems for a specific language.
+
+#### Step 1: Configuration (`human_eval/utils/config.json`)
+
+1. **Open `human_eval/utils/config.json`**.
+2. **Add the language name** to the `languages` array. The name you use here (e.g., `"german"`, `"korean"`) will be used to request translations from the model and as a key to access the translated prompts.
+
+    *Example `config.json` with German added:*
+
+    ```json
+    {
+      "languages": [
+        "mandarin-chinese",
+        "spanish",
+        "hindi",
+        "portugese",
+        "bengali",
+        "french",
+        "russian",
+        "arabic",
+        "japanese",
+        "punjabi",
+        "german"
+      ],
+      "translation_model": "mistral:7b-instruct"
+    }
+    ```
+
+#### Step 2: Translation (`human_eval/utils/translator.py`)
+
+1. **Ensure Ollama is running**: The `translator.py` script relies on a local Ollama instance to perform the translations using the specified `translation_model`. Make sure Ollama is installed and running, and that the `translation_model` has been pulled and is available locally (e.g., by running `ollama pull zongwei/gemma3-translator:4b`).
+
+2. **Run the translation script**: Execute the following command from the project root:
+
+    ```bash
+    python -m  human_eval.utils.translator
+    ```
+
+    This script will save the comprehensive translated problem set to `data/TranslatedHumanEval.jsonl.gz`. Each entry in this file will now contain an additional field, `"prompts"`, which is a dictionary that maps language names to their respective translated problem descriptions.
 
 ## Installation
 
-Make sure to use python 3.7 or later:
-```
-$ conda create -n codex python=3.7
-$ conda activate codex
+Check out and install this repository:
+
+```bash
+git clone <YOUR_GIT_REPOSITORY_URL>
+cd multi-language-human-eval
 ```
 
-Check out and install this repository:
-```
-$ git clone https://github.com/openai/human-eval
-$ pip install -e human-eval
+Make sure to use python 3.10 or later:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate 
+pip install -e .
 ```
 
 ## Usage
@@ -30,16 +81,19 @@ disclaimer before running code in a potentially unsafe manner. See the comment i
 After following the above instructions to enable execution, generate samples
 and save them in the following JSON Lines (jsonl) format, where each sample is
 formatted into a single line like so:
-```
+
+```json
 {"task_id": "Corresponding HumanEval task ID", "completion": "Completion only without the prompt"}
 ```
+
 We provide `example_problem.jsonl` and `example_solutions.jsonl` under `data`
 to illustrate the format and help with debugging.
 
 Here is nearly functional example code (you just have to provide
 `generate_one_completion` to make it work) that saves generated completions to
 `samples.jsonl`.
-```
+
+```python
 from human_eval.data import write_jsonl, read_problems
 
 problems = read_problems()
@@ -53,24 +107,25 @@ samples = [
 write_jsonl("samples.jsonl", samples)
 ```
 
-To evaluate the samples, run
+### Evaluating in a Specific Language
+
+To evaluate the samples in a language other than English, you can now use the `--language` argument with `evaluate_functional_correctness`. The `TranslatedHumanEval.jsonl.gz` file is now the default problem file, but you can override it with `--problem_file` if needed.
+
+Example for evaluating in Spanish:
+
+```bash
+evaluate_functional_correctness samples.jsonl --language spanish
 ```
-$ evaluate_functional_correctness samples.jsonl
-Reading samples...
-32800it [00:01, 23787.50it/s]
-Running test suites...
-100%|...| 32800/32800 [16:11<00:00, 33.76it/s]
-Writing results to samples.jsonl_results.jsonl...
-100%|...| 32800/32800 [00:00<00:00, 42876.84it/s]
-{'pass@1': ..., 'pass@10': ..., 'pass@100': ...}
+
+Or, if you need to specify a different problem file:
+
+```bash
+evaluate_functional_correctness samples.jsonl --problem_file data/MyCustomTranslatedEval.jsonl.gz --language german
 ```
-This script provides more fine-grained information in a new file ending in
-`<input_path>_results.jsonl`. Each row now contains whether the completion
-`passed` along with the execution `result` which is one of "passed", "timed
-out", or "failed".
 
 As a quick sanity-check, the example samples should yield 0.5 pass@1.
-```
+
+```bash
 $ evaluate_functional_correctness data/example_samples.jsonl --problem_file=data/example_problem.jsonl
 Reading samples...
 6it [00:00, 3397.11it/s]
@@ -85,9 +140,11 @@ Because there is no unbiased way of estimating pass@k when there are fewer
 samples than k, the script does not evaluate pass@k for these cases. To
 evaluate with other k values, pass `--k=<comma-separated-values-here>`. For
 other options, see
+
+```bash
+evaluate_functional_correctness --help
 ```
-$ evaluate_functional_correctness --help
-```
+
 However, we recommend that you use the default values for the rest.
 
 ## Known Issues
@@ -95,13 +152,12 @@ However, we recommend that you use the default values for the rest.
 While evaluation uses very little memory, you might see the following error
 message when the system is running out of RAM. Since this may cause some
 correct programs to fail, we recommend that you free some memory and try again.
+
 ```
 malloc: can't allocate region
 ```
 
 ## Citation
-
-Please cite using the following bibtex entry:
 
 ```
 @article{chen2021codex,
